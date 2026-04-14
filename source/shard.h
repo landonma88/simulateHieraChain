@@ -31,13 +31,19 @@ public:
     std::vector<string> accessControlList; // 状态权限目录
     std::queue<transaction> transactionMempool; // 交易池
 
+    std::map<int, std::vector<int>> topologyMap; // 存储 祖先 -> 子分片 的映射
+    std::map<int, int> parentMap; // 存储 子分片 -> 父分片 的反向映射，用于向上追溯
+
+    map<int, txsDistribution> intraShardTxsDistribution; // 片内交易负载
+    map<int, txsDistribution> crossShardTxsDistribution; // 跨片交易负载 
+
 private:
     std::mutex mempoolMutex; // 交易池读写互斥锁
     std::mutex performance_mtx; // 当前分片的交易吞吐和延迟性能读写锁
 
 public:
-    Shard(int _shardid, int _order_capability, int _execution_capability, int _processBatch, int _tx_sendRate, vector<string> permission_list); // 初始化函数
     
+    Shard(); // 初始化函数
     void generateTransactions(vector<transaction>& txs); // 生成交易
     void enqueueTransactions(); // 向交易池添加一批新来的交易
     void enqueueRemoteTransactions(vector<transaction>& txs); // 向交易池添加一份
@@ -48,39 +54,13 @@ public:
     void startMetrics(); // 计算分片当前的交易吞吐和延迟
     void start(); // 启动分片
     double getCurrentTimestamp();
-};
 
-
-class CoordinatorShard{
-
-    public:
-
-        int txId = 0;
-        int shardId;
-        int transactionSendRate; // 每秒收到的客户端总交易数量
-        int batchFetchSize;
-        int orderingCapacity;
-
-        std::queue<transaction> transactionMempool; // 交易池
-        vector<pair<pair<int, int>, double>> involvedShardIds; // 该分片收到的所有跨片交易占的比例
-
-        std::mutex mempoolMutex; // 交易池锁
-
-    public:
-        CoordinatorShard(int _shardid, int _transactionSendRate, int _batchFetchSize, int _order_capability, vector<pair<pair<int, int>, double>> _involvedShardIds){
-            shardId = _shardid;
-            transactionSendRate = _transactionSendRate;
-            batchFetchSize = _batchFetchSize;
-            orderingCapacity = _order_capability;
-            involvedShardIds = _involvedShardIds;
-        }
-
-        void generateTransactions(vector<transaction>& txs); // 生成交易
-        void enqueueTransactions(); // 向交易池添加交易
-        void fetchTransactions(thread_safety_map<int, Shard*>& shards); // 从交易池
-        void runConsensus(vector<transaction>& txs, thread_safety_map<int, Shard*>& shards);
-        void start(thread_safety_map<int, Shard*>& shards);
-        double getCurrentTimestamp();
+    int parseShardId();
+    void parseTopology();
+    void printShardTopology();
+    int findLCA(int shardA, int shardB);
+    void parseWorkload();
+    void printWorkload();
 };
 
 #endif // SHARD_H

@@ -31,37 +31,14 @@ int main(){
     int totalShardCount = 4;
     int CoordinatorShardCount = 1; // 所有分片个数
 
+    Shard* shard = new Shard();
 
-    // // 初始化叶子分片数组
-    // thread_safety_map <int, Shard*> shards;
-    // for(int shardid = 1; shardid <= leafShardCount; shardid++){
-    //     map<string, string> permission_list; // 权限列表
-    //     int state_number = 1000; // 分片中的状态数量
+    // manager->parseTopology();
+    // manager->printShardTopology();
+    // manager->parseWorkload();
+    // manager->printWorkload();
 
-    //     srand(unsigned(time(0)));
-    //     for(int i = 0; i < state_number; i++){
-    //         int stateid = i + (shardid - 1) * state_number;
-    //         string key = "state_" + to_string(stateid);
-    //         string value = to_string(rand() % 100);
-    //         permission_list.insert(make_pair(key, value)); // 权限列表
-    //     }
-
-    //     // int order_capability = 5000;
-    //     // int execution_capability = 8000;
-    //     // int processBatch = 5000;
-    //     // int tx_sendRate = 2000;
-    //     Shard* shard = new Shard(shardid, orderingCapacity, executionCapacity, batchFetchSize, transactionSendRate, permission_list);
-    //     shards.insert(shardid, shard); // 初始化分片
-    // }
-
-
-    ShardsManager* manager = new ShardsManager(leafShardCount, CoordinatorShardCount, accessControlListDir);
-    manager->parseTopology();
-    manager->printShardTopology();
-    manager->parseWorkload();
-    manager->printWorkload();
-
-    manager->startAllShards();
+    // manager->startAllShards();
 
     // std::this_thread::sleep_for(std::chrono::milliseconds(10000)); // sleep10秒，等待全部分片启动完毕
 

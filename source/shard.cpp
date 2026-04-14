@@ -6,147 +6,263 @@
 #include "shard.h"
 #include <stdlib.h>
 #include <time.h>
+#include <sstream>
+#include <fstream>
+#include <set>
+#include <regex>
 
 using namespace std;
 
 #ifndef SHARD_CPP
 #define SHARD_CPP
 
-void CoordinatorShard::start(thread_safety_map<int, Shard*>& shards){
+void Shard::printWorkload(){
 
-    // 向交易池添加交易
-    std::thread addTransactions_thread([this] {
-        enqueueTransactions();
-    });
+// 使用 lambda 简化重复逻辑
+    auto display = [](const std::string& label, const std::map<int, txsDistribution>& data) {
+        std::cout << "--- " << label << " ---" << std::endl;
+        
+        // C++11 基于范围的 for 循环
+        for (const std::pair<const int, txsDistribution>& item : data) {
+            // item.first 是 map 的 key
+            // item.second 是 txsDistribution 结构体
+            const int& id = item.first;
+            const txsDistribution& dist = item.second;
 
-    // 从交易池拉取交易
-    std::thread removeTransactions_thread([this, &shards] {
-        fetchTransactions(shards);
-    });
-
-    // // 计算当前分片的 TPS
-    // std::thread monitor_thread([this] {
-    //     monitor();
-    // });
-
-    addTransactions_thread.detach();
-    removeTransactions_thread.detach();
-    // monitor_thread.detach();
-}
-
-
-double CoordinatorShard::getCurrentTimestamp(){
-    auto now = std::chrono::system_clock::now();
-    auto epoch = now.time_since_epoch();    
-    double second = std::chrono::duration<double>(epoch).count();
-    return second;
-}
-
-void CoordinatorShard::generateTransactions(vector<transaction> &txs){
-
-    // cout << "一次性生成" << txs_persec << "笔交易至交易池" << endl;
-    double second = getCurrentTimestamp();
-    for(int i = 0; i < transactionSendRate; i++){ // 每次生成 txs_persec 笔跨片交易
-        transaction tx;
-        tx.type = 2;
-        string prefix_txid = to_string(shardId) + to_string(txId);
-        tx.txId = prefix_txid;
-        tx.sendedTime = second;
-        txs.push_back(tx);
-        txId++;
-    }
-}
-
-void CoordinatorShard::enqueueTransactions(){
-
-    int addThread = 80000;
-
-    while(true){
-
-        vector<transaction> txs;
-        generateTransactions(txs);
-
-        mempoolMutex.lock(); // 手动加锁
-
-        int tx_size = txs.size();
-        for(int i = 0; i < tx_size; i++){
-            transactionMempool.push(txs.at(i));
-        }
-
-        mempoolMutex.unlock(); // 手动加锁
-
-        int remaining_per = double(addThread - tx_size) / addThread * 1000;
-        std::this_thread::sleep_for(std::chrono::milliseconds(remaining_per)); // 模拟共识过程
-        std::this_thread::sleep_for(std::chrono::milliseconds(10)); // 模拟客户端发送速度
-    }
-}
-
-void CoordinatorShard::fetchTransactions(thread_safety_map<int, Shard*>& shards){
-
-    while (true)
-    {
-
-        int real_batchFetchSize = 0;
-
-        mempoolMutex.lock(); // 手动加锁
-
-        if(!transactionMempool.empty()){
-
-            vector<transaction> txs;
-            int remaining_size = transactionMempool.size(); // 交易池中剩下的交易数
-
-            if(remaining_size >= batchFetchSize){
-                real_batchFetchSize = batchFetchSize;
+            std::cout << "[ID: " << id << "] "
+                      << "Type: " << (dist.type == 1 ? "Intra" : "Cross") << " | "
+                      << "Count: " << dist.txCount << " | "
+                      << "Involved Shards: [";
+            
+            // 打印 vector
+            for (size_t i = 0; i < dist.invlovedShardIds.size(); ++i) {
+                std::cout << dist.invlovedShardIds[i] 
+                          << (i == dist.invlovedShardIds.size() - 1 ? "" : ", ");
             }
-            else{
-                real_batchFetchSize = remaining_size;
-            }
-
-            for(int i = 0; i < real_batchFetchSize; i++){
-                txs.push_back(transactionMempool.front());
-                transactionMempool.pop();
-            }
-
-            // 开始对交易进行共识和执行
-            runConsensus(txs, shards);
+            std::cout << "]" << std::endl;
         }
+        
+        if (data.empty()) {
+            std::cout << "(Empty)" << std::endl;
+        }
+        std::cout << std::endl;
+    };
 
-        mempoolMutex.unlock(); // 手动释放锁
-
-        int remaining_per = double(orderingCapacity - real_batchFetchSize) / orderingCapacity * 1000;
-        std::this_thread::sleep_for(std::chrono::milliseconds(remaining_per)); // 模拟共识过程
-        std::this_thread::sleep_for(std::chrono::milliseconds(10)); // 模拟共识过程
-    }
+    display("Intra-Shard Txs Distribution", intraShardTxsDistribution);
+    display("Cross-Shard Txs Distribution", crossShardTxsDistribution);
 }
 
-void CoordinatorShard::runConsensus(vector<transaction>& txs, thread_safety_map<int, Shard*>& shards){
-    int tx_size = txs.size();
+void Shard::parseWorkload(){
 
-    // 将共识成功的交易发送至相应分片交易池
-    // 遍历 destination_pairs
-    int pair_size = involvedShardIds.size();
-    for(int i = 0; i < pair_size; i++){
-        auto item = involvedShardIds.at(i);
-        auto shardids_pair = item.first;
-        auto percentage = item.second;
+    std::vector<string> workloadDistribution;
 
-        int subtx_size = percentage * tx_size; // 这一批所有的跨片交易数量
-
-        vector<transaction> subtxs;
-        for(int i = 0; i < subtx_size; i++){
-            subtxs.push_back(txs.at(i));
-        }
-
-        // 将subtxs中的交易分别压到 shardids_pair 中不同的分片中
-        int shardid1 = shardids_pair.first;
-        int shardid2 = shardids_pair.second;
-
-        auto shard = shards.find(shardid1);
-        shard->enqueueRemoteTransactions(subtxs);
-
-        shard = shards.find(shardid2);
-        shard->enqueueRemoteTransactions(subtxs);
+    std::vector<std::string> lines;
+    std::ifstream file(workLoadDir);
+    
+    if (!file.is_open()) {
+        std::cerr << "无法打开文件1: " << workLoadDir << std::endl;
+        exit(1);
     }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        // 去除行首尾空白
+        line.erase(0, line.find_first_not_of(" \t\r\n"));
+        line.erase(line.find_last_not_of(" \t\r\n") + 1);
+        
+        if (line.empty()) continue;
+        
+        // 如果一行中有多个配置（逗号分隔），可以进一步分割
+        std::istringstream iss(line);
+        std::string item;
+        
+        // 如果你想将每个逗号分隔的部分作为独立元素
+        while (std::getline(iss, item, ',')) {
+            // 去除每个item前后的空格
+            item.erase(0, item.find_first_not_of(" \t"));
+            item.erase(item.find_last_not_of(" \t") + 1);
+            
+            if (!item.empty()) {
+                workloadDistribution.push_back(item);
+            }
+        }
+    }
+
+    file.close();
+
+    for(auto item: workloadDistribution){
+        cout << item << endl;
+    }
+
+    // 从 workloadDistribution 中解析得到 map<int, txsDistribution> intraShardTxsDistribution 和 map<int, txsDistribution> crossShardTxsDistribution
+
+    // 正则表达式说明：
+    // (shard(\d+)) : 匹配第一个分片及其数字 ID
+    // (_inner|_shard(\d+)) : 匹配 "_inner" 或者 "_shard" 及其后面的第二个 ID
+    // :(\d+) : 匹配冒号后的交易数量
+    
+    std::regex txDisPattern; 
+    txDisPattern = std::regex("shard(\\d+)(?:_inner|_shard(\\d+)):(\\d+)");
+
+    std::smatch match;
+
+    for (const std::string& entry : workloadDistribution) {
+        if (std::regex_search(entry, match, txDisPattern)) {
+            int shardId1 = std::stoi(match[1].str());
+            int txCount = std::stoi(match[match.size() - 1].str());
+
+            // 检查是片内还是跨片
+            if (entry.find("inner") != std::string::npos) {
+                // --- 片内交易 (Intra-shard) ---
+                txsDistribution dist;
+                dist.type = 1;
+                dist.txCount = txCount;
+                dist.invlovedShardIds = {shardId1};
+
+                // Key 为分片 ID
+                intraShardTxsDistribution[shardId1] = dist;
+
+            } else {
+                // --- 跨片交易 (Cross-shard) ---
+                int shardId2 = std::stoi(match[2].str());
+                
+                txsDistribution dist;
+                dist.type = 2;
+                dist.txCount = txCount;
+                dist.invlovedShardIds = {shardId1, shardId2};
+
+                // Key 为两个分片的最近公共祖先 (LCA)
+                int lcaKey = findLCA(shardId1, shardId2);
+                
+                // 如果找到 LCA，则放入跨片字典
+                if (lcaKey != -1) {
+                    crossShardTxsDistribution[lcaKey] = dist;
+                } else {
+                    std::cerr << "Warning: No LCA found for " << entry << std::endl;
+                }
+            }
+        }
+    }
+    cout << "解析负载完成..." << endl;
+}
+
+int Shard::findLCA(int shardA, int shardB){
+
+    if (shardA == shardB) return shardA;
+    std::set<int> pathA;
+    
+    // 1. 记录 shardA 向上到根节点的所有路径
+    int curr = shardA;
+    pathA.insert(curr);
+    while (parentMap.count(curr)) {
+        curr = parentMap[curr];
+        pathA.insert(curr);
+    }
+
+    // 2. 从 shardB 开始向上追溯，第一个在 pathA 中出现的节点就是 LCA
+    curr = shardB;
+    while (true) {
+        if (pathA.count(curr)) {
+            return curr;
+        }
+        if (parentMap.count(curr)) {
+            curr = parentMap[curr];
+        } else {
+            break; // 到达根节点仍未找到
+        }
+    }
+    return -1; // 没有公共祖先
+}
+
+void Shard::printShardTopology(){
+
+    std::cout << "\n========== Shard Topology Report ==========" << std::endl;
+    std::cout << std::left << std::setw(15) << "Ancestor ID" << " | " << "Child Shard IDs" << std::endl;
+    std::cout << "-------------------------------------------" << std::endl;
+
+    for (const auto& [ancestorId, children] : topologyMap) {
+        std::cout << std::left << std::setw(15) << ancestorId << " | [ ";
+        
+        for (size_t i = 0; i < children.size(); ++i) {
+            std::cout << children[i] << (i == children.size() - 1 ? "" : ", ");
+        }
+        
+        std::cout << " ]" << std::endl;
+    }
+    std::cout << "===========================================\n" << std::endl;
+}
+
+void Shard::parseTopology(){
+
+    std::ifstream configFile(shardsTopologyDir);
+
+    // 检查文件是否成功打开
+    if (!configFile.is_open()) {
+        std::cerr << "无法打开分片拓扑文件: " << shardsTopologyDir << std::endl;
+        exit(1);
+    }
+
+    std::string line;
+    while (std::getline(configFile, line)) {
+        if (line.empty()) continue;
+
+        size_t commaPos = line.find(',');
+        if (commaPos == std::string::npos) continue;
+
+        // 解析当前行所属的祖先 ID
+        int ancestorId = std::stoi(line.substr(0, commaPos));
+
+        size_t start = line.find('[');
+        size_t end = line.find(']');
+        if (start != std::string::npos && end != std::string::npos) {
+            std::string childrenStr = line.substr(start + 1, end - start - 1);
+            std::stringstream ss(childrenStr);
+            std::string childIdStr;
+
+            while (std::getline(ss, childIdStr, ',')) {
+                if (!childIdStr.empty()) {
+                    int childId = std::stoi(childIdStr);
+                    topologyMap[ancestorId].push_back(childId);
+                    // 核心：记录每个子分片的直接父节点
+                    parentMap[childId] = ancestorId;
+                }
+            }
+        }
+    }
+    configFile.close();
+    cout << "解析拓扑完成..." << endl;
+}
+
+// 提取分片Id
+int Shard::parseShardId(){
+
+    std::ifstream file(shardIdDir);
+    if (!file.is_open()) {
+        std::cerr << "无法打开文件！" << std::endl;
+        exit(1);
+    }
+
+    std::string line;
+    if (std::getline(file, line)) {
+        // 1. 找到 '=' 的位置
+        size_t pos = line.find('=');
+        
+        if (pos != std::string::npos) {
+            // 2. 截取 '=' 之后的部分
+            std::string valueStr = line.substr(pos + 1);
+
+            // 3. 转换为整数 (stoi 会自动处理前导空格)
+            try {
+                int shardId = std::stoi(valueStr);
+                std::cout << "shardId = " << shardId << std::endl;
+            } catch (const std::exception& e) {
+                std::cerr << "Failed to convert shardId number: " << e.what() << std::endl;
+            }
+        }
+    }
+
+    file.close();
+    return shardId;
 }
 
 
@@ -339,19 +455,19 @@ void Shard::printPerformanceStats(){
 
     std::lock_guard<std::mutex> performance_lock(performance_mtx);
 
-    if(committedTxCount == 0){
-        // cout << "分片"<< shardid << "交易延迟 = 0" << endl;
-        // cout << "分片"<< shardid << "交易吞吐 = 0" << endl;
-    }
-    else{
-        throughputs.at(shardId) = committedTxCount;
-        auto latency = make_pair(committedSubTxCount, totalLatency);
-        latencys.at(shardId) = latency;
-        // cout << "分片" << shardid << "交易吞吐 = "<< committedTxCount << ", 交易延迟 = "<< total_latency / committedTxCount << endl;
-        committedTxCount = 0;
-        committedSubTxCount = 0;
-        totalLatency = 0;
-    }
+    // if(committedTxCount == 0){
+    //     // cout << "分片"<< shardid << "交易延迟 = 0" << endl;
+    //     // cout << "分片"<< shardid << "交易吞吐 = 0" << endl;
+    // }
+    // else{
+    //     throughputs.at(shardId) = committedTxCount;
+    //     auto latency = make_pair(committedSubTxCount, totalLatency);
+    //     latencys.at(shardId) = latency;
+    //     cout << "分片" << shardid << "交易吞吐 = "<< committedTxCount << ", 交易延迟 = "<< total_latency / committedTxCount << endl;
+    //     committedTxCount = 0;
+    //     committedSubTxCount = 0;
+    //     totalLatency = 0;
+    // }
 }
 
 void Shard::startMetrics(){ // 统计分片当前的交易吞吐和延迟
@@ -363,9 +479,21 @@ void Shard::startMetrics(){ // 统计分片当前的交易吞吐和延迟
     }
 }
 
-Shard::Shard(int _shardid, int _orderingCapacity, int _executionCapacity, int _batchFetchSize, int _transactionSendRate, vector<string> _accessControlList):
-shardId(_shardid), orderingCapacity(_orderingCapacity), executionCapacity(_executionCapacity), batchFetchSize(_batchFetchSize), transactionSendRate(_transactionSendRate) {
-    accessControlList = _accessControlList;
+Shard::Shard() {
+
+    this->orderingCapacity = orderingCapacity;
+    this->executionCapacity = executionCapacity;
+    this->batchFetchSize = batchFetchSize;
+    this->transactionSendRate = transactionSendRate;
+
+    // 获取分片id
+    this->shardId = parseShardId();
+
+    parseTopology(); // 解析系统拓扑
+    printShardTopology(); // 打印系统拓扑结构
+    parseWorkload(); // 解析负载
+    printWorkload();
+    startMetrics();
 }
 
 #endif // SHARD_CPP

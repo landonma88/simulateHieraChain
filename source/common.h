@@ -19,7 +19,8 @@ extern map<int, pair<int, double>> latencys;
 
 extern string accessControlListDir;
 extern string shardsTopologyDir;
-extern string WorkLoadDir;
+extern string workLoadDir;
+extern string shardIdDir;
 
 // 定义交易
 struct transaction{
@@ -36,8 +37,6 @@ struct txsDistribution{
     int txCount;
     vector<int> invlovedShardIds;
 };
-
-
 
 // 定义线程安全数据结构
 // Map
