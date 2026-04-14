@@ -10,6 +10,7 @@
 #include <fstream>
 #include <set>
 #include <regex>
+#include <algorithm>
 
 using namespace std;
 
@@ -302,55 +303,159 @@ int Shard::parseShardId(){
     return shardId;
 }
 
-void Shard::generateTransactions(vector<transaction>& txs){
+void Shard::parseAccessControlList(){
 
-    // 从 intraShardTxsDistribution 和 crossShardTxsDistribution 中寻找当前分片负责生成的任务
-
-
-
-
-    // // 1. 在片内交易 map 中查找
-    // auto itIntra = intraShardTxsDistribution.find(myShardId);
-    // if (itIntra != intraShardTxsDistribution.end()) {
-    //     // 找到了，itIntra->second 就是对应的 txsDistribution 结构体
-    //     txsDistribution& myIntraDist = itIntra->second;
-    //     std::cout << "找到片内负载，交易数量: " << myIntraDist.txCount << std::endl;
-    // } else {
-    //     std::cout << "片内负载中未找到当前 ShardID: " << myShardId << std::endl;
-    // }
-
-    // // 2. 在跨片交易 map 中查找
-    // auto itCross = crossShardTxsDistribution.find(myShardId);
-    // if (itCross != crossShardTxsDistribution.end()) {
-    //     // 找到了
-    //     txsDistribution& myCrossDist = itCross->second;
-    //     std::cout << "找到跨片负载，交易数量: " << myCrossDist.txCount << std::endl;
-    // } else {
-    //     std::cout << "跨片负载中未找到当前 ShardID: " << myShardId << std::endl;
-    // }
-
-
-
-
-    double second = getCurrentTimestamp();
-    for(int i = 0; i < transactionSendRate; i++){
-        transaction tx;
-        tx.type = 1;
-
-        string prefix_txid = to_string(shardId) + to_string(txId);
-        tx.txId = prefix_txid;
-
-        tx.sendedTime = second;
-
-        txs.push_back(tx);
-        txId++;
+    std::ifstream file(accessControlListDir);
+    if (!file.is_open()) {
+        std::cerr << "无法打开状态权限目录文件: " << accessControlListDir << std::endl;
+        exit(1);
     }
 
+    allAccessControlLists.clear();
+    accessControlList.clear();
 
+    std::regex shardHeaderPattern("^shard(\\d+):$");
+    std::smatch match;
+    int currentShardId = -1;
 
+    std::string line;
+    while (std::getline(file, line)) {
+        size_t first = line.find_first_not_of(" \t\r\n");
+        if (first == std::string::npos) {
+            continue;
+        }
+        size_t last = line.find_last_not_of(" \t\r\n");
+        line = line.substr(first, last - first + 1);
+        if (line.empty()) {
+            continue;
+        }
 
+        if (std::regex_match(line, match, shardHeaderPattern)) {
+            currentShardId = std::stoi(match[1].str());
+            if (!allAccessControlLists.count(currentShardId)) {
+                allAccessControlLists[currentShardId] = std::vector<std::string>();
+            }
+            continue;
+        }
 
+        if (currentShardId != -1) {
+            allAccessControlLists[currentShardId].push_back(line);
+        }
+    }
 
+    file.close();
+
+    if (allAccessControlLists.count(shardId)) {
+        accessControlList = allAccessControlLists[shardId];
+    }
+}
+
+void Shard::generateTransactions(vector<transaction>& txs){
+
+    txs.clear();
+    if (transactionSendRate <= 0) {
+        return;
+    }
+
+    auto pickRandomAccount = [&](int fromShardId) -> std::string {
+        const std::vector<std::string>* accounts = NULL;
+
+        if (fromShardId == shardId && !accessControlList.empty()) {
+            accounts = &accessControlList;
+        } else if (allAccessControlLists.count(fromShardId) && !allAccessControlLists[fromShardId].empty()) {
+            accounts = &allAccessControlLists[fromShardId];
+        } else if (!accessControlList.empty()) {
+            accounts = &accessControlList;
+        }
+
+        if (accounts != NULL && !accounts->empty()) {
+            int idx = rand() % accounts->size();
+            return accounts->at(idx);
+        }
+
+        return "shard" + to_string(fromShardId) + "_account";
+    };
+
+    int intraLoad = 0;
+    std::map<int, txsDistribution>::iterator itIntra = intraShardTxsDistribution.find(shardId);
+    if (itIntra != intraShardTxsDistribution.end()) {
+        intraLoad = itIntra->second.txCount;
+    }
+
+    std::vector<txsDistribution> myCrossDists;
+    int crossLoad = 0;
+    for (std::map<int, txsDistribution>::iterator it = crossShardTxsDistribution.begin(); it != crossShardTxsDistribution.end(); ++it) {
+        const txsDistribution& dist = it->second;
+        if (dist.invlovedShardIds.empty()) {
+            continue;
+        }
+
+        bool currentInvolved = std::find(dist.invlovedShardIds.begin(), dist.invlovedShardIds.end(), shardId) != dist.invlovedShardIds.end();
+        bool iAmGenerator = dist.invlovedShardIds[0] == shardId;
+
+        if (currentInvolved && iAmGenerator) {
+            myCrossDists.push_back(dist);
+            crossLoad += dist.txCount;
+        }
+    }
+
+    int totalLoad = intraLoad + crossLoad;
+    if (totalLoad <= 0) {
+        return;
+    }
+
+    int intraCount = int((long long)transactionSendRate * intraLoad / totalLoad);
+    int crossCount = transactionSendRate - intraCount;
+    double second = getCurrentTimestamp();
+
+    for (int i = 0; i < intraCount; i++) {
+        transaction tx;
+        tx.type = 1;
+        tx.txId = to_string(shardId) + "_" + to_string(txId++);
+        tx.invlovedShardIds.push_back(shardId);
+        tx.RWSet.push_back(pickRandomAccount(shardId));
+        tx.RWSet.push_back(pickRandomAccount(shardId));
+        tx.sendedTime = second;
+        txs.push_back(tx);
+    }
+
+    int remainingCrossCount = crossCount;
+    int remainingCrossLoad = crossLoad;
+    int crossSize = myCrossDists.size();
+    for (int i = 0; i < crossSize && remainingCrossCount > 0; i++) {
+        const txsDistribution& dist = myCrossDists[i];
+        int allocCount = 0;
+        if (i == crossSize - 1 || remainingCrossLoad <= 0) {
+            allocCount = remainingCrossCount;
+        } else {
+            allocCount = int((long long)remainingCrossCount * dist.txCount / remainingCrossLoad);
+        }
+
+        if (allocCount < 0) {
+            allocCount = 0;
+        }
+
+        remainingCrossCount -= allocCount;
+        remainingCrossLoad -= dist.txCount;
+
+        for (int j = 0; j < allocCount; j++) {
+            transaction tx;
+            tx.type = 2;
+            tx.txId = to_string(shardId) + "_" + to_string(txId++);
+            tx.invlovedShardIds = dist.invlovedShardIds;
+
+            for (size_t k = 0; k < dist.invlovedShardIds.size(); k++) {
+                tx.RWSet.push_back(pickRandomAccount(dist.invlovedShardIds[k]));
+            }
+
+            if (tx.RWSet.empty()) {
+                tx.RWSet.push_back(pickRandomAccount(shardId));
+            }
+
+            tx.sendedTime = second;
+            txs.push_back(tx);
+        }
+    }
 }
 
 void Shard::enqueueTransactions(){
@@ -551,13 +656,15 @@ void Shard::startMetrics(){ // 统计分片当前的交易吞吐和延迟
 
 Shard::Shard() {
 
-    this->orderingCapacity = orderingCapacity;
-    this->executionCapacity = executionCapacity;
-    this->batchFetchSize = batchFetchSize;
-    this->transactionSendRate = transactionSendRate;
+    this->orderingCapacity = ::orderingCapacity;
+    this->executionCapacity = ::executionCapacity;
+    this->batchFetchSize = ::batchFetchSize;
+    this->transactionSendRate = ::transactionSendRate;
 
     // 获取分片id
     this->shardId = parseShardId();
+    srand(static_cast<unsigned int>(time(NULL) + shardId));
+    parseAccessControlList(); // 解析状态权限目录
 
     parseTopology(); // 解析系统拓扑
     printShardTopology(); // 打印系统拓扑结构

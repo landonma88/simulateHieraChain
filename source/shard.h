@@ -37,6 +37,7 @@ public:
     double totalLatency = 0;
 
     std::vector<string> accessControlList; // 状态权限目录
+    std::map<int, std::vector<string>> allAccessControlLists; // 所有分片的状态权限目录
     std::queue<transaction> transactionMempool; // 交易池
 
     std::map<int, std::vector<int>> topologyMap; // 存储 祖先 -> 子分片 的映射
@@ -69,6 +70,7 @@ public:
     int findLCA(int shardA, int shardB);
     void parseWorkload();
     void printWorkload();
+    void parseAccessControlList();
 };
 
 #endif // SHARD_H
