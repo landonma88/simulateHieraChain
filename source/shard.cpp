@@ -16,6 +16,107 @@ using namespace std;
 #ifndef SHARD_CPP
 #define SHARD_CPP
 
+void Shard::printAccessControlList(){
+
+    // 打印 accessControlList
+    std::cout << "Access Control List for Shard " << shardId << ": ";
+    if (accessControlList.empty()) {
+        std::cout << "None" << std::endl;
+        return;
+    }
+    
+    for (size_t i = 0; i < accessControlList.size(); ++i) {
+        std::cout << accessControlList[i];
+        if (i < accessControlList.size() - 1) {
+            std::cout << ", ";
+        }
+    }
+    std::cout << std::endl;
+}
+
+void Shard::parseAccessControlList(){
+    std::map<std::string, std::vector<int>> shardMap;
+    std::ifstream file(accessControlListDir);
+    
+    if (!file.is_open()) {
+        std::cerr << "无法打开文件: " << accessControlListDir << std::endl;
+        exit(1);
+    }
+
+    string line;
+    string currentShard;
+    while (std::getline(file, line)) {
+        // 去除行首尾的空白字符
+        line.erase(0, line.find_first_not_of(" \t\r\n"));
+        line.erase(line.find_last_not_of(" \t\r\n") + 1);
+        
+        if (line.empty()) continue;
+        
+        // 检查是否是分片标题行（以"shard"开头）
+        if (line.find("shard") == 0) {
+            // 1. 找到冒号的位置
+            size_t colonPos = line.find(':');
+            std::string shardName;
+            if (colonPos != std::string::npos) {
+                shardName = line.substr(0, colonPos);
+            } else {
+                shardName = line;
+            }
+
+            // 2. 提取数字部分：假设格式永远是 "shard" 开头
+            // 找到第一个数字出现的位置
+            size_t firstDigitPos = shardName.find_first_of("0123456789");
+            
+            if (firstDigitPos != std::string::npos) {
+                // 截取从第一个数字到最后的字符串
+                std::string idStr = shardName.substr(firstDigitPos);
+                
+                try {
+                    int shardId = std::stoi(idStr); // 转换为整数
+                    
+                    // 3. 将其作为 map 的 Key (假设你的 map 是 map<int, vector<int>>)
+                    shardMap[to_string(shardId)] = std::vector<int>();
+                    
+                    // 记录当前的 ID，方便后续数字行插入
+                    currentShard = to_string(shardId);
+                } catch (const std::exception& e) {
+                    std::cerr << "转换 ID 失败: " << idStr << std::endl;
+                }
+            }
+        }
+        // 如果是数字行（分片后的数字）
+        else if (!currentShard.empty()) {
+            std::istringstream iss(line);
+            int num;
+            while (iss >> num) {
+                shardMap[currentShard].push_back(num);
+            }
+        }
+    }
+
+    // 如果当前分片属于叶子分片，直接从 shardMap 中获取 key 为 shardId 的权限列表
+    // 如果当前分片属于协调者，收集其所有孩子分片的权限列表
+    if(this->role == ShardRole::LEAF){
+        accessControlList = shardMap[to_string(shardId)];
+    }
+    else{
+        vector<int> childShardIds = topologyMap[shardId];
+
+        for (std::vector<int>::iterator it = childShardIds.begin();
+            it != childShardIds.end(); ++it) {
+            int childShardId = *it;
+
+            auto subAccessControlList = shardMap[to_string(childShardId)];
+
+            // 遍历 subAccessControlList 中的每个元素
+            for (std::vector<int>::iterator subIt = subAccessControlList.begin();
+                subIt != subAccessControlList.end(); ++subIt) {
+                accessControlList.push_back(*subIt);
+            }
+        }
+    }
+}
+
 void Shard::printWorkload(){
 
 // 使用 lambda 简化重复逻辑
@@ -192,82 +293,98 @@ void Shard::printShardTopology(){
     std::cout << "===========================================\n" << std::endl;
 }
 
-void Shard::parseTopology(){
-
+// 这个解析拓扑结构函数需要修改一下，topologyMap 中存储的是 存储 祖先 -> 子分片 的映射，这里的子分片是指位于底层的叶子分片
+// 例如， 1和2祖先是5，3和4祖先是6，5和6的祖先是7，那么7的孩子分片应该是1 2 3 4
+void Shard::parseTopology() {
     std::ifstream configFile(shardsTopologyDir);
-
-    // 检查文件是否成功打开
     if (!configFile.is_open()) {
-        std::cerr << "无法打开分片拓扑文件: " << shardsTopologyDir << std::endl;
+        std::cerr << "无法打开文件: " << shardsTopologyDir << std::endl;
         exit(1);
     }
 
+    std::map<int, std::vector<int>> directChildrenMap;
     std::string line;
+
     while (std::getline(configFile, line)) {
         if (line.empty()) continue;
 
-        // 寻找叶子分片
+        // 1. 处理角色判定（保持原样）
         if (line.find("leaf:") != std::string::npos) {
-            size_t start = line.find('{');
-            size_t end = line.find('}');
-            
+            size_t start = line.find('{'), end = line.find('}');
             if (start != std::string::npos && end != std::string::npos) {
-                // 提取 "1,2"
                 std::string idsStr = line.substr(start + 1, end - start - 1);
                 std::stringstream ss(idsStr);
                 std::string segment;
-                
-                // 以逗号分割提取每个ID
                 while (std::getline(ss, segment, ',')) {
-                    if (!segment.empty()) {
-                        int leafId = std::stoi(segment);
-
-                        cout << "leafId = " << leafId << endl;
-                        cout << "this->shardId = " << this->shardId << endl;
-
-                        // 在你的分片管理容器中寻找该 ID 并设置角色
-                        if (leafId == this->shardId) {
-                            ShardRole role(ShardRole::LEAF);
-                            this->role = role;
-                        }
+                    if (!segment.empty() && std::stoi(segment) == this->shardId) {
+                        this->role = ShardRole::LEAF;
                     }
                 }
             }
             continue;
         }
 
+        // 2. 构建基础树结构 (Ancestor -> Direct Children)
         size_t commaPos = line.find(',');
         if (commaPos == std::string::npos) continue;
 
-        // 解析当前行所属的祖先 ID
         int ancestorId = std::stoi(line.substr(0, commaPos));
-
-        size_t start = line.find('[');
-        size_t end = line.find(']');
+        size_t start = line.find('['), end = line.find(']');
         if (start != std::string::npos && end != std::string::npos) {
             std::string childrenStr = line.substr(start + 1, end - start - 1);
             std::stringstream ss(childrenStr);
             std::string childIdStr;
-
             while (std::getline(ss, childIdStr, ',')) {
                 if (!childIdStr.empty()) {
                     int childId = std::stoi(childIdStr);
-                    topologyMap[ancestorId].push_back(childId);
-                    // 核心：记录每个子分片的直接父节点
+                    directChildrenMap[ancestorId].push_back(childId);
                     parentMap[childId] = ancestorId;
                 }
             }
         }
     }
-
     configFile.close();
 
-    if (this->role == ShardRole::LEAF) {
-        cout << "当前分片[" << this->shardId << "] 角色判定：叶子分片" << endl;
-    } else {
-        cout << "当前分片[" << this->shardId << "] 角色判定：协调者分片" << endl;
+    // 3. 核心改进：定义一个 Lambda 函数来递归寻找所有底层叶子
+    // 逻辑：如果一个节点没有子节点，它就是叶子；否则递归它的所有子节点
+    std::function<void(int, std::vector<int>&)> findLeaves = 
+        [&](int nodeId, std::vector<int>& leafList) {
+        
+        // 如果该节点在 directChildrenMap 中没有记录，说明它是最底层的叶子
+        if (directChildrenMap.find(nodeId) == directChildrenMap.end() || 
+            directChildrenMap[nodeId].empty()) {
+            leafList.push_back(nodeId);
+            return;
+        }
+
+        // 否则，它是祖先/中间节点，继续向下找
+        for (int childId : directChildrenMap[nodeId]) {
+            findLeaves(childId, leafList);
+        }
+    };
+
+    // 4. 为每个祖先节点生成最终的叶子映射
+    for (auto const& pair : directChildrenMap) {
+        int ancestorId = pair.first;
+        std::vector<int> allBottomLeaves;
+        findLeaves(ancestorId, allBottomLeaves);
+        
+        // 去重（防止拓扑配置重复导致的 ID 重复）
+        std::sort(allBottomLeaves.begin(), allBottomLeaves.end());
+        allBottomLeaves.erase(std::unique(allBottomLeaves.begin(), allBottomLeaves.end()), allBottomLeaves.end());
+        
+        topologyMap[ancestorId] = allBottomLeaves;
     }
-    cout << "解析拓扑完成..." << endl;
+
+    // 设置默认角色
+    if (this->role != ShardRole::LEAF) this->role = ShardRole::COORDINATOR;
+
+    // if(this->role == ShardRole::LEAF){
+    //     cout << "分片" << shardId << "是叶子分片" << endl;
+    // }
+    // else{
+    //     cout << "分片" << shardId << "是协调者分片" << endl;
+    // }
 }
 
 // 提取分片Id
@@ -306,44 +423,60 @@ void Shard::generateTransactions(vector<transaction>& txs){
 
     // 从 intraShardTxsDistribution 和 crossShardTxsDistribution 中寻找当前分片负责生成的任务
 
+    txsDistribution* myTxsDistribution;
+    if (this->role == ShardRole::LEAF) {
+        // 1. 在片内交易 map 中查找
+        auto itIntra = intraShardTxsDistribution.find(shardId);
+        if (itIntra != intraShardTxsDistribution.end()) {
+            // 找到了，itIntra->second 就是对应的 txsDistribution 结构体
+            myTxsDistribution = &(itIntra->second);
+        }
 
-
-
-    // // 1. 在片内交易 map 中查找
-    // auto itIntra = intraShardTxsDistribution.find(myShardId);
-    // if (itIntra != intraShardTxsDistribution.end()) {
-    //     // 找到了，itIntra->second 就是对应的 txsDistribution 结构体
-    //     txsDistribution& myIntraDist = itIntra->second;
-    //     std::cout << "找到片内负载，交易数量: " << myIntraDist.txCount << std::endl;
-    // } else {
-    //     std::cout << "片内负载中未找到当前 ShardID: " << myShardId << std::endl;
-    // }
-
-    // // 2. 在跨片交易 map 中查找
-    // auto itCross = crossShardTxsDistribution.find(myShardId);
-    // if (itCross != crossShardTxsDistribution.end()) {
-    //     // 找到了
-    //     txsDistribution& myCrossDist = itCross->second;
-    //     std::cout << "找到跨片负载，交易数量: " << myCrossDist.txCount << std::endl;
-    // } else {
-    //     std::cout << "跨片负载中未找到当前 ShardID: " << myShardId << std::endl;
-    // }
-
-
-
-
+    } else {
+        // 2. 在跨片交易 map 中查找
+        auto itCross = crossShardTxsDistribution.find(shardId);
+        if (itCross != crossShardTxsDistribution.end()) {
+            // 找到了
+            myTxsDistribution = &(itCross->second);
+        }
+    }
+    
+    // 开始生成交易, 每次生成 transactionSendRate 笔
     double second = getCurrentTimestamp();
+
     for(int i = 0; i < transactionSendRate; i++){
-        transaction tx;
-        tx.type = 1;
 
-        string prefix_txid = to_string(shardId) + to_string(txId);
-        tx.txId = prefix_txid;
+        string prefixTxId = to_string(shardId) + to_string(txId);
+        int type = this->role == ShardRole::LEAF ? 1 : 2;
+        
 
-        tx.sendedTime = second;
 
-        txs.push_back(tx);
-        txId++;
+
+
+
+
+
+
+
+
+
+        // transaction tx = {
+        //     this->role == ShardRole::LEAF:1?2, 
+        //     prefixTxId, 
+        //     {"key1", "key2"}, 
+        //     {1}, 
+        //     1648752000.0
+        // };
+
+
+        // // tx.type = 1;
+
+        // // tx.txId = prefix_txid;
+
+        // // tx.sendedTime = second;
+
+        // txs.push_back(tx);
+        // txId++;
     }
 
 
@@ -492,7 +625,6 @@ void Shard::start(){
     // 从交易池拉取交易
     std::thread removeTransactions_thread([this] {
         fetchTransactions();
-
     });
 
     // 计算当前分片的TPS
@@ -511,13 +643,10 @@ double Shard::getCurrentTimestamp(){
 
     // 获取当前系统时间
     auto now = std::chrono::system_clock::now();
-    
     // 获取当前时间距离 Unix 时间戳的持续时间（包括小数部分）
     auto epoch = now.time_since_epoch();
-    
     // 转换为浮动类型，秒数可以包含小数
     double second = std::chrono::duration<double>(epoch).count();
-
     return second;
 }
 
@@ -542,8 +671,7 @@ void Shard::printPerformanceStats(){
 
 void Shard::startMetrics(){ // 统计分片当前的交易吞吐和延迟
 
-    while (true)
-    {
+    while (true){
         printPerformanceStats();
         std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // 每秒统计一次吞吐和延迟
     }
@@ -561,6 +689,10 @@ Shard::Shard() {
 
     parseTopology(); // 解析系统拓扑
     printShardTopology(); // 打印系统拓扑结构
+
+    parseAccessControlList(); // 解析访问权限列表
+    printAccessControlList();
+
     parseWorkload(); // 解析负载
     printWorkload();
 }

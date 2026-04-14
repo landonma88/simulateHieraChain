@@ -36,7 +36,7 @@ public:
     double committedSubTxCount = 0; // 1s内提交的交易数量(跨片交易按1笔交易算)
     double totalLatency = 0;
 
-    std::vector<string> accessControlList; // 状态权限目录
+    std::vector<int> accessControlList; // 状态权限目录
     std::queue<transaction> transactionMempool; // 交易池
 
     std::map<int, std::vector<int>> topologyMap; // 存储 祖先 -> 子分片 的映射
@@ -69,6 +69,8 @@ public:
     int findLCA(int shardA, int shardB);
     void parseWorkload();
     void printWorkload();
+    void parseAccessControlList();
+    void printAccessControlList();
 };
 
 #endif // SHARD_H
