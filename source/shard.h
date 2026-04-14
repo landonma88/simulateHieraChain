@@ -12,12 +12,20 @@ using namespace std;
 
 extern std::mutex global_performance_mtx;
 
+// 定义枚举类型
+enum class ShardRole : int {
+    LEAF = 1,        // 叶子分片
+    COORDINATOR = 2  // 协调者分片
+};
+
 // 叶子分片
 class Shard{
 
 public:
+
     int txId = 0;
     int shardId;
+    ShardRole role; // 成员变量
     int orderingCapacity; // 交易排序能力（每秒能够处理的交易处理）
     int executionCapacity; // 交易执行能力（美秒能够执行的工作量）
     int batchFetchSize; // 分片单位时间内(500ms)从交易池拉取交易数量

@@ -206,6 +206,36 @@ void Shard::parseTopology(){
     while (std::getline(configFile, line)) {
         if (line.empty()) continue;
 
+        // 寻找叶子分片
+        if (line.find("leaf:") != std::string::npos) {
+            size_t start = line.find('{');
+            size_t end = line.find('}');
+            
+            if (start != std::string::npos && end != std::string::npos) {
+                // 提取 "1,2"
+                std::string idsStr = line.substr(start + 1, end - start - 1);
+                std::stringstream ss(idsStr);
+                std::string segment;
+                
+                // 以逗号分割提取每个ID
+                while (std::getline(ss, segment, ',')) {
+                    if (!segment.empty()) {
+                        int leafId = std::stoi(segment);
+
+                        cout << "leafId = " << leafId << endl;
+                        cout << "this->shardId = " << this->shardId << endl;
+
+                        // 在你的分片管理容器中寻找该 ID 并设置角色
+                        if (leafId == this->shardId) {
+                            ShardRole role(ShardRole::LEAF);
+                            this->role = role;
+                        }
+                    }
+                }
+            }
+            continue;
+        }
+
         size_t commaPos = line.find(',');
         if (commaPos == std::string::npos) continue;
 
@@ -229,13 +259,21 @@ void Shard::parseTopology(){
             }
         }
     }
+
     configFile.close();
+
+    if (this->role == ShardRole::LEAF) {
+        cout << "当前分片[" << this->shardId << "] 角色判定：叶子分片" << endl;
+    } else {
+        cout << "当前分片[" << this->shardId << "] 角色判定：协调者分片" << endl;
+    }
     cout << "解析拓扑完成..." << endl;
 }
 
 // 提取分片Id
 int Shard::parseShardId(){
 
+    int shardId;
     std::ifstream file(shardIdDir);
     if (!file.is_open()) {
         std::cerr << "无法打开文件！" << std::endl;
@@ -253,8 +291,7 @@ int Shard::parseShardId(){
 
             // 3. 转换为整数 (stoi 会自动处理前导空格)
             try {
-                int shardId = std::stoi(valueStr);
-                std::cout << "shardId = " << shardId << std::endl;
+                shardId = std::stoi(valueStr);
             } catch (const std::exception& e) {
                 std::cerr << "Failed to convert shardId number: " << e.what() << std::endl;
             }
@@ -265,8 +302,35 @@ int Shard::parseShardId(){
     return shardId;
 }
 
-
 void Shard::generateTransactions(vector<transaction>& txs){
+
+    // 从 intraShardTxsDistribution 和 crossShardTxsDistribution 中寻找当前分片负责生成的任务
+
+
+
+
+    // // 1. 在片内交易 map 中查找
+    // auto itIntra = intraShardTxsDistribution.find(myShardId);
+    // if (itIntra != intraShardTxsDistribution.end()) {
+    //     // 找到了，itIntra->second 就是对应的 txsDistribution 结构体
+    //     txsDistribution& myIntraDist = itIntra->second;
+    //     std::cout << "找到片内负载，交易数量: " << myIntraDist.txCount << std::endl;
+    // } else {
+    //     std::cout << "片内负载中未找到当前 ShardID: " << myShardId << std::endl;
+    // }
+
+    // // 2. 在跨片交易 map 中查找
+    // auto itCross = crossShardTxsDistribution.find(myShardId);
+    // if (itCross != crossShardTxsDistribution.end()) {
+    //     // 找到了
+    //     txsDistribution& myCrossDist = itCross->second;
+    //     std::cout << "找到跨片负载，交易数量: " << myCrossDist.txCount << std::endl;
+    // } else {
+    //     std::cout << "跨片负载中未找到当前 ShardID: " << myShardId << std::endl;
+    // }
+
+
+
 
     double second = getCurrentTimestamp();
     for(int i = 0; i < transactionSendRate; i++){
@@ -281,6 +345,12 @@ void Shard::generateTransactions(vector<transaction>& txs){
         txs.push_back(tx);
         txId++;
     }
+
+
+
+
+
+
 }
 
 void Shard::enqueueTransactions(){
@@ -434,7 +504,7 @@ void Shard::start(){
     removeTransactions_thread.detach();
     monitor_thread.detach();
 
-    cout << "启动分片 " << shardId << endl;
+    cout << "启动分片" << this->shardId << " ..."<< endl;
 }
 
 double Shard::getCurrentTimestamp(){
@@ -493,7 +563,6 @@ Shard::Shard() {
     printShardTopology(); // 打印系统拓扑结构
     parseWorkload(); // 解析负载
     printWorkload();
-    startMetrics();
 }
 
 #endif // SHARD_CPP
