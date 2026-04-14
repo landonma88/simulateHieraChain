@@ -358,7 +358,7 @@ void Shard::generateTransactions(vector<transaction>& txs){
     }
 
     auto pickRandomAccount = [&](int fromShardId) -> std::string {
-        const std::vector<std::string>* accounts = NULL;
+        const std::vector<std::string>* accounts = nullptr;
 
         if (fromShardId == shardId && !accessControlList.empty()) {
             accounts = &accessControlList;
@@ -368,7 +368,7 @@ void Shard::generateTransactions(vector<transaction>& txs){
             accounts = &accessControlList;
         }
 
-        if (accounts != NULL && !accounts->empty()) {
+        if (accounts != nullptr && !accounts->empty()) {
             int idx = rand() % accounts->size();
             return accounts->at(idx);
         }
@@ -405,6 +405,11 @@ void Shard::generateTransactions(vector<transaction>& txs){
     }
 
     int intraCount = int((long long)transactionSendRate * intraLoad / totalLoad);
+    if (intraCount < 0) {
+        intraCount = 0;
+    } else if (intraCount > transactionSendRate) {
+        intraCount = transactionSendRate;
+    }
     int crossCount = transactionSendRate - intraCount;
     double second = getCurrentTimestamp();
 
@@ -433,6 +438,8 @@ void Shard::generateTransactions(vector<transaction>& txs){
 
         if (allocCount < 0) {
             allocCount = 0;
+        } else if (allocCount > remainingCrossCount) {
+            allocCount = remainingCrossCount;
         }
 
         remainingCrossCount -= allocCount;
