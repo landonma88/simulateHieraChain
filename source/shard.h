@@ -1,0 +1,78 @@
+#include <queue>
+#include <string>
+#include <mutex>
+#include <map>
+#include <iostream>
+#include <memory>
+#include "common.h"
+
+using namespace std;
+
+#ifndef SHARD_H
+#define SHARD_H
+
+extern std::mutex global_performance_mtx;
+
+// 定义枚举类型
+enum class ShardRole : int {
+    LEAF = 1,        // 叶子分片
+    COORDINATOR = 2  // 协调者分片
+};
+
+class ShardHelper;
+
+// 叶子分片
+class Shard{
+
+public:
+
+    int txId = 0;
+    int shardId;
+    ShardRole role; // 成员变量
+    int orderingCapacity; // 交易排序能力（每秒能够处理的交易处理）
+    int executionCapacity; // 交易执行能力（美秒能够执行的工作量）
+    int batchFetchSize; // 分片单位时间内(500ms)从交易池拉取交易数量
+    int transactionSendRate; // 客户端交易发送速率
+
+    // 用于统计交易吞吐和延迟的变量
+    double committedTxCount = 0; // 1s内提交的交易数量
+    double committedSubTxCount = 0; // 1s内提交的交易数量(跨片交易按1笔交易算)
+    double totalLatency = 0;
+
+    std::map<int, vector<int>>shardToOwnedStateIds; // shardid -> ownedStateIds
+    std::vector<int> ownedStateIds; // 状态权限目录
+    std::queue<transaction*> transactionMempool; // 共识内存交易池
+    std::queue<transaction*> executeTransactionsMempool; // 共识内存交易池
+
+    std::map<int, std::vector<int>> topologyMap; // 存储 祖先 -> 子分片 的映射
+    std::map<int, int> parentMap; // 存储 子分片 -> 父分片 的反向映射，用于向上追溯
+
+    map<int, txsDistribution> intraShardTxsDistribution; // 片内交易负载
+    map<int, txsDistribution> crossShardTxsDistribution; // 跨片交易负载 
+
+private:
+    std::unique_ptr<ShardHelper> helper;
+    std::mutex mempoolMutex; // 交易池读写互斥锁
+    std::mutex executionMempoolMutex; // 交易池读写互斥锁
+    std::mutex performance_mtx; // 当前分片的交易吞吐和延迟性能读写锁
+
+public:
+    
+    Shard(); // 初始化函数
+    ~Shard();
+    void generateTransactions(vector<transaction*>& txs); // 生成交易
+    void printTransaction(transaction& tx);
+
+    void enqueueTransactions(); // 向交易池添加一批新来的交易
+    void enqueueRemoteTransactions(vector<transaction*>& txs); // 向交易池添加一份
+    
+    void runExecution();
+    void runConsensus(); // 从交易池取走一部分交易、最多processBatch个
+    void executeTransactions(vector<transaction*>& txs); // 执行共识晚的一批交易
+    void printPerformanceStats();
+    void startMetrics(); // 计算分片当前的交易吞吐和延迟
+    void start(); // 启动分片
+    void simulateExecution(int complexity = 100);
+};
+
+#endif // SHARD_H
