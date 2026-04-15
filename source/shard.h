@@ -3,6 +3,7 @@
 #include <mutex>
 #include <map>
 #include <iostream>
+#include <memory>
 #include "common.h"
 
 using namespace std;
@@ -17,6 +18,8 @@ enum class ShardRole : int {
     LEAF = 1,        // 叶子分片
     COORDINATOR = 2  // 协调者分片
 };
+
+class ShardHelper;
 
 // 叶子分片
 class Shard{
@@ -48,6 +51,7 @@ public:
     map<int, txsDistribution> crossShardTxsDistribution; // 跨片交易负载 
 
 private:
+    std::unique_ptr<ShardHelper> helper;
     std::mutex mempoolMutex; // 交易池读写互斥锁
     std::mutex executionMempoolMutex; // 交易池读写互斥锁
     std::mutex performance_mtx; // 当前分片的交易吞吐和延迟性能读写锁
@@ -55,6 +59,7 @@ private:
 public:
     
     Shard(); // 初始化函数
+    ~Shard();
     void generateTransactions(vector<transaction*>& txs); // 生成交易
     void printTransaction(transaction& tx);
 
@@ -67,18 +72,7 @@ public:
     void printPerformanceStats();
     void startMetrics(); // 计算分片当前的交易吞吐和延迟
     void start(); // 启动分片
-    double getCurrentTimestamp();
-
-    int parseShardId();
-    void parseTopology();
-    void printShardTopology();
-    int findLCA(int shardA, int shardB);
-    void parseWorkload();
-    void printWorkload();
-    void parseOwnedStateIds();
-    void printOwnedStateIds();
     void simulateExecution(int complexity = 100);
-    int lookupShardByState(string stateId);
 };
 
 #endif // SHARD_H
