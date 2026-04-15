@@ -24,7 +24,6 @@ extern map<int, int> throughputs;
 extern map<int, pair<int, double>> latencys;
 
 
-
 // 定义交易
 struct transaction{
     int type; // 交易类型，1表示片内交易，2表示跨片交易

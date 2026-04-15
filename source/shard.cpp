@@ -20,6 +20,16 @@ using namespace std;
 #ifndef SHARD_CPP
 #define SHARD_CPP
 
+// 模拟单笔片内交易的计算开销
+// complexity: 复杂度参数，值越大 CPU 占用时间越长
+void Shard::simulateExecution(int complexity) {
+    volatile double result = 0.0;
+    for (int i = 0; i < complexity; ++i) {
+        // 使用正弦/对数运算模拟非平凡的计算任务
+        result += std::sin(i) * std::log(i + 1.0);
+    }
+}
+
 void Shard::printAccessControlList(){
 
     // 打印 accessControlList
@@ -535,7 +545,7 @@ void Shard::generateTransactions(vector<transaction*>& txs){
         
         transaction tx = {type, prefixTxId, rwset, invlovedShardIds, currentTime};
         txs.push_back(&tx);
-        // printTransaction(tx);
+        printTransaction(tx);
         txId++;
     }
     // cout << "本轮交易生成完毕...." << endl;
@@ -558,13 +568,53 @@ void Shard::enqueueTransactions(){
     }
 }
 
-void Shard::fetchTransactions() { 
+void Shard::runExecution(){
     while (true) {
-        std::vector<transaction*> txs;
+    
+        std::vector<transaction*> txsToExecute;
+
+        // 1. 加锁保护队列
+        executionMempoolMutex.lock();
+
+        // 2. 计算本次实际可以提取的数量
+        // logic: 取 (池中剩余数量) 和 (执行容量) 的较小值
+        int remove_size = std::min((int)executeTransactionsMempool.size(), executionCapacity);
+
+        // 3. 循环提取
+        for (int i = 0; i < remove_size; ++i) {
+            transaction* tx = executeTransactionsMempool.front();
+            txsToExecute.push_back(tx);
+            executeTransactionsMempool.pop();
+        }
+
+        // 4. 提取完毕，立即解锁
+        executionMempoolMutex.unlock();
+
+        // 5. 后续处理拿到的交易
+        for (auto tx : txsToExecute) {
+            // 因为 tx 是指针，使用 -> 访问成员
+            std::cout << "处理交易: " << tx->txId << std::endl;
+            
+            // 执行具体逻辑
+            if (tx->type == 1) { // 片内交易
+                simulateExecution();
+            }else{ // 跨片交易
+
+            }
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+}
+
+void Shard::runConsensus() {
+    while (true) {
         int remove_size = 0;
 
         // 1. 只有从内存池提取数据时才锁定 mempool
         mempoolMutex.lock(); 
+        executionMempoolMutex.lock();
+
         if (!transactionMempool.empty()) {
             int current_mempool_size = transactionMempool.size();
             
@@ -573,102 +623,18 @@ void Shard::fetchTransactions() {
 
             for (int i = 0; i < remove_size; i++) {
                 auto tx = transactionMempool.front();
-                txs.push_back(tx);
+                executeTransactionsMempool.push(tx); // 将交易放入执行队列
                 transactionMempool.pop();
             }
         }
+
+        executionMempoolMutex.unlock();
         mempoolMutex.unlock(); // 提取完毕立即释放，允许 generateTransactions 继续存入
 
-        // // 2. 如果拿到了交易，开始处理性能统计和共识 // 这个放在执行部分
-        // if (!txs.empty()) {
-        //     // performance_mtx.lock();  // 保护统计变量
-            
-        //     double time = getCurrentTimestamp();
-        //     for (auto tx : txs) {
-        //         // 根据交易类型计算贡献度
-        //         if (tx->type == 1) {
-        //             committedTxCount += 1.0;
-        //         } else if (tx->type == 2) {
-        //             committedTxCount += 0.5; // 跨片交易可能只贡献一半工作量
-        //         }
-
-        //         double latency = time - tx->sendedTime;
-        //         totalLatency += latency;
-        //     }
-        //     committedSubTxCount += remove_size;
-            
-        //     performance_mtx.unlock(); 
-
-        //     // 3. 执行共识 (在锁外执行，避免阻塞其他线程)
-        //     runConsensus(txs);
-        // }
-
-        // 4. 模拟共识耗时 (Ordering Latency)
-        // 逻辑：如果拿得少，说明负载低，睡眠时间稍长；如果拿满了，说明负载高，处理会更快连续
-        int sleep_time = double(remove_size) / orderingCapacity * 1000;        
-        std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time + 10)); 
-        // cout << "remove_size = "<< remove_size << ", 交易共识完毕..." << endl;
+        int sleep_time = double(remove_size) / orderingCapacity * 1000;   
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time + 10));
     }
 }
-
-// void Shard::fetchTransactions(){ // 从交易池子中拿交易 (每次最多拿 orderingCapacity 笔)
-    
-//     while (true){
-//         mempoolMutex.lock(); // 手动加锁
-
-//         int remove_size = 0;
-
-//         if(!transactionMempool.empty()){
-
-//             performance_mtx.lock();  // 加锁
-
-//             // double time = getCurrentTimestamp();
-//             vector<transaction*> txs;
-//             int remaining_size = transactionMempool.size(); // 交易池中剩下的交易数
-
-//             if(remaining_size >= batchFetchSize){
-//                 remove_size = batchFetchSize;
-//             }
-//             else{
-//                 remove_size = remaining_size;
-//             }
-
-//             // int execution_workload = 0;
-//             for(int i = 0; i < remove_size; i++){
-
-//                 auto tx = transactionMempool.front();
-//                 txs.push_back(tx);
-//                 transactionMempool.pop();
-
-//                 if(tx->type == 1){
-//                     // execution_workload += 1;
-//                     committedTxCount += 1;
-//                 }
-//                 else if(tx->type == 2){
-//                     // execution_workload += 1;
-//                     committedTxCount += 0.5;
-//                 }
-
-//                 // double latency = time - tx->sendedTime;
-//                 // totalLatency += latency;
-//             }
-
-//             committedSubTxCount += remove_size;
-
-//             performance_mtx.unlock(); // 解锁
-
-//             // 调换顺序
-//             runConsensus(txs);
-//             // executionTxs(txs);
-//         }
-
-//         mempoolMutex.unlock(); // 手动释放锁
-
-//         int remaining_per = double(orderingCapacity - remove_size) / orderingCapacity * 1000;
-//         std::this_thread::sleep_for(std::chrono::milliseconds(remaining_per)); // 模拟共识过程
-//         std::this_thread::sleep_for(std::chrono::milliseconds(10)); // 模拟共识过程
-//     }
-// }
 
 void Shard::enqueueRemoteTransactions(vector<transaction*>& txs){
 
@@ -680,12 +646,6 @@ void Shard::enqueueRemoteTransactions(vector<transaction*>& txs){
     }
 
     mempoolMutex.unlock(); // 手动加锁
-}
-
-void Shard::runConsensus(vector<transaction*>& txs){
-    int tx_size = txs.size();
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    // std::this_thread::sleep_for(std::chrono::milliseconds(int((float(tx_size) / order_capability) * 500)));
 }
 
 void Shard::executeTransactions(vector<transaction*>& txs){
@@ -720,14 +680,19 @@ void Shard::executeTransactions(vector<transaction*>& txs){
 
 void Shard::start(){
 
-    // 向交易池添加交易
-    std::thread addTransactions_thread([this] {
+    // 生成交易并向交易池添加交易
+    std::thread injectTxThread([this] {
         enqueueTransactions();
     });
 
-    // 从交易池拉取交易
-    std::thread removeTransactions_thread([this] {
-        fetchTransactions();
+    // 从交易池拉取交易并共识
+    std::thread consensusThread([this] {
+        runConsensus();
+    });
+
+    // 执行共识完的交易
+    std::thread executeThread([this] {
+        runExecution();
     });
 
     // 计算当前分片的TPS
@@ -735,8 +700,9 @@ void Shard::start(){
         startMetrics();
     });
 
-    addTransactions_thread.detach();
-    removeTransactions_thread.detach();
+    injectTxThread.detach();
+    consensusThread.detach();
+    executeThread.detach();
     monitor_thread.detach();
 
     cout << "启动分片" << this->shardId << " ..."<< endl;
