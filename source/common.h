@@ -13,7 +13,7 @@ namespace Config {
     extern int executionCapacity;
     extern int batchFetchSize;
     extern int transactionSendRate;
-    extern string accessControlListDir;
+    extern string ownedStateIdsDir;
     extern string shardsTopologyDir;
     extern string workLoadDir;
     extern string shardIdDir;

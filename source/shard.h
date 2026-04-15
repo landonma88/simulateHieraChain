@@ -36,7 +36,8 @@ public:
     double committedSubTxCount = 0; // 1s内提交的交易数量(跨片交易按1笔交易算)
     double totalLatency = 0;
 
-    std::vector<int> accessControlList; // 状态权限目录
+    std::map<int, vector<int>>shardToOwnedStateIds; // shardid -> ownedStateIds
+    std::vector<int> ownedStateIds; // 状态权限目录
     std::queue<transaction*> transactionMempool; // 共识内存交易池
     std::queue<transaction*> executeTransactionsMempool; // 共识内存交易池
 
@@ -56,6 +57,7 @@ public:
     Shard(); // 初始化函数
     void generateTransactions(vector<transaction*>& txs); // 生成交易
     void printTransaction(transaction& tx);
+
     void enqueueTransactions(); // 向交易池添加一批新来的交易
     void enqueueRemoteTransactions(vector<transaction*>& txs); // 向交易池添加一份
     
@@ -73,9 +75,10 @@ public:
     int findLCA(int shardA, int shardB);
     void parseWorkload();
     void printWorkload();
-    void parseAccessControlList();
-    void printAccessControlList();
+    void parseOwnedStateIds();
+    void printOwnedStateIds();
     void simulateExecution(int complexity = 100);
+    int lookupShardByState(string stateId);
 };
 
 #endif // SHARD_H

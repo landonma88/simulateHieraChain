@@ -20,6 +20,25 @@ using namespace std;
 #ifndef SHARD_CPP
 #define SHARD_CPP
 
+/**
+ * @brief 根据状态 ID 查找所属的分片 ID
+ * @param stateId 要查找的状态标识
+ * @return int 返回分片 ID，若未找到则返回 -1
+ */
+int Shard::lookupShardByState(string stateId) {
+    // 遍历整个 map: [ShardID, vector<StateID>]
+    for (auto const& [shardId, states] : shardToOwnedStateIds) {
+        // 在 vector 中查找是否存在该 stateId
+        auto it = std::find(states.begin(), states.end(), stoi(stateId));
+        
+        if (it != states.end()) {
+            return shardId; // 找到了，返回对应的 Key
+        }
+    }
+    
+    return -1; // 全表遍历完未找到
+}
+
 // 模拟单笔片内交易的计算开销
 // complexity: 复杂度参数，值越大 CPU 占用时间越长
 void Shard::simulateExecution(int complexity) {
@@ -30,30 +49,30 @@ void Shard::simulateExecution(int complexity) {
     }
 }
 
-void Shard::printAccessControlList(){
+void Shard::printOwnedStateIds(){
 
-    // 打印 accessControlList
+    // 打印 ownedStateIds
     std::cout << "Access Control List for Shard " << shardId << ": ";
-    if (accessControlList.empty()) {
+    if (ownedStateIds.empty()) {
         std::cout << "None" << std::endl;
         return;
     }
     
-    for (size_t i = 0; i < accessControlList.size(); ++i) {
-        std::cout << accessControlList[i];
-        if (i < accessControlList.size() - 1) {
+    for (size_t i = 0; i < ownedStateIds.size(); ++i) {
+        std::cout << ownedStateIds[i];
+        if (i < ownedStateIds.size() - 1) {
             std::cout << ", ";
         }
     }
     std::cout << std::endl;
 }
 
-void Shard::parseAccessControlList(){
+void Shard::parseOwnedStateIds(){
     std::map<std::string, std::vector<int>> shardMap;
-    std::ifstream file(Config::accessControlListDir);
+    std::ifstream file(Config::ownedStateIdsDir);
     
     if (!file.is_open()) {
-        std::cerr << "无法打开文件: " << Config::accessControlListDir << std::endl;
+        std::cerr << "无法打开文件: " << Config::ownedStateIdsDir << std::endl;
         exit(1);
     }
 
@@ -111,7 +130,8 @@ void Shard::parseAccessControlList(){
     // 如果当前分片属于叶子分片，直接从 shardMap 中获取 key 为 shardId 的权限列表
     // 如果当前分片属于协调者，收集其所有孩子分片的权限列表
     if(this->role == ShardRole::LEAF){
-        accessControlList = shardMap[to_string(shardId)];
+        ownedStateIds = shardMap[to_string(shardId)];
+        shardToOwnedStateIds.insert(make_pair(shardId, ownedStateIds));
     }
     else{
         vector<int> childShardIds = topologyMap[shardId];
@@ -120,12 +140,13 @@ void Shard::parseAccessControlList(){
             it != childShardIds.end(); ++it) {
             int childShardId = *it;
 
-            auto subAccessControlList = shardMap[to_string(childShardId)];
+            auto subownedStateIds = shardMap[to_string(childShardId)];
+            shardToOwnedStateIds.insert(make_pair(childShardId, ownedStateIds));
 
-            // 遍历 subAccessControlList 中的每个元素
-            for (std::vector<int>::iterator subIt = subAccessControlList.begin();
-                subIt != subAccessControlList.end(); ++subIt) {
-                accessControlList.push_back(*subIt);
+            // 遍历 subownedStateIds 中的每个元素
+            for (std::vector<int>::iterator subIt = subownedStateIds.begin();
+                subIt != subownedStateIds.end(); ++subIt) {
+                ownedStateIds.push_back(*subIt);
             }
         }
     }
@@ -494,9 +515,9 @@ void Shard::generateTransactions(vector<transaction*>& txs){
         string prefixTxId = to_string(shardId) + to_string(txId);
         int type = this->role == ShardRole::LEAF ? 1 : 2;
 
-        // 从  accessControlList 中随机选择两个元素作为本次读写集
+        // 从  ownedStateIds 中随机选择两个元素作为本次读写集
         // 1. 初始化下标向量 [0, 1, 2, ..., n-1]
-        std::vector<size_t> indices(accessControlList.size());
+        std::vector<size_t> indices(ownedStateIds.size());
         std::iota(indices.begin(), indices.end(), 0); 
 
         // 2. 静态随机数引擎
@@ -508,8 +529,8 @@ void Shard::generateTransactions(vector<transaction*>& txs){
 
         // 4. 取出前两个下标对应的元素
         std::vector<string> rwset;
-        rwset.push_back(to_string(accessControlList[indices[0]]));
-        rwset.push_back(to_string(accessControlList[indices[1]]));
+        rwset.push_back(to_string(ownedStateIds[indices[0]]));
+        rwset.push_back(to_string(ownedStateIds[indices[1]]));
 
         // 设置 vector<int> invlovedShardIds
         // 如果 当前分片属于叶子分片, invlovedShard是本地分片
@@ -572,6 +593,9 @@ void Shard::runExecution(){
     
         std::vector<transaction*> txsToExecute;
 
+        // 待发送集合：Key 是目标分片 ID，Value 是需要发给它的交易列表
+        std::map<int, std::vector<transaction*>> pendingSendQueue;
+
         // 1. 加锁保护队列
         executionMempoolMutex.lock();
 
@@ -599,12 +623,31 @@ void Shard::runExecution(){
                 simulateExecution();
             }else{ // 跨片交易
                 
+                // 核心逻辑：解析 RWSet 判定目标分片
+                std::set<int> targetShards; // 使用 set 自动去重
+
+                for (const std::string& stateKey : tx->RWSet) {
+                    // 这里假设你有一个全局或本地的路由表 stateToShardMap
+                    // 或者通过 stateKey 里的数字解析出它所属的分片
+                    int targetShardId = lookupShardByState(stateKey);
+
+                    // 如果目标分片不是当前分片自己，则加入待发送名单
+                    if (targetShardId != this->shardId) {
+                        targetShards.insert(targetShardId);
+                    }
+                }
                 
+                // 将该交易引用加入到每一个涉及的远端分片发送队列中
+                for (int sid : targetShards) {
+                    pendingSendQueue[sid].push_back(tx);
+                }
+
+                // 3. 模拟发送逻辑（将待发送集合转发给通信模块）
+                if (!pendingSendQueue.empty()) {
+                    // 待补充通信逻辑.....
 
 
-
-
-
+                }
             }
         }
 
@@ -764,8 +807,8 @@ Shard::Shard() {
     parseTopology(); // 解析系统拓扑
     printShardTopology(); // 打印系统拓扑结构
 
-    parseAccessControlList(); // 解析访问权限列表
-    printAccessControlList();
+    parseOwnedStateIds(); // 解析访问权限列表
+    printOwnedStateIds();
 
     parseWorkload(); // 解析负载
     printWorkload();
