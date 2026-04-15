@@ -543,9 +543,8 @@ void Shard::generateTransactions(vector<transaction*>& txs){
             }
         }
         
-        transaction tx = {type, prefixTxId, rwset, invlovedShardIds, currentTime};
-        txs.push_back(&tx);
-        printTransaction(tx);
+        transaction* tx = new transaction{type, prefixTxId, rwset, invlovedShardIds, currentTime};
+        txs.push_back(tx);
         txId++;
     }
     // cout << "本轮交易生成完毕...." << endl;
@@ -593,13 +592,13 @@ void Shard::runExecution(){
         // 5. 后续处理拿到的交易
         for (auto tx : txsToExecute) {
             // 因为 tx 是指针，使用 -> 访问成员
-            std::cout << "处理交易: " << tx->txId << std::endl;
+            // std::cout << "处理交易: " << tx->txId << std::endl;
             
             // 执行具体逻辑
             if (tx->type == 1) { // 片内交易
                 simulateExecution();
             }else{ // 跨片交易
-
+                
             }
         }
 
