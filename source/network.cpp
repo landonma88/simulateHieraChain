@@ -154,6 +154,7 @@ void NetworkManager::acceptLoop() {
             continue;
         }
 
+        // 线程数量给个上限或者线程池
         std::thread(&NetworkManager::handleConnection, this, clientFd).detach(); // 为每一个连接创建一个线程处理
     }
 }
@@ -179,7 +180,6 @@ void NetworkManager::handleConnection(int clientFd) {
 
     Message message;
     if (deserializeMessagePayload(payload, message)) {
-        cout << "收到来自分片 shard = " << message.srcShardId << "的消息....." << endl;
         dispatcher.dispatch(message);
 
     } else {
@@ -209,10 +209,10 @@ bool NetworkManager::recvAll(int fd, char* buffer, size_t length) {
     return true;
 }
 
-bool NetworkManager::sendMessage(const Message& message, int maxRetries, int retryDelayMs) {
-    auto endpointIt = shardEndpoints.find(message.dstShardId);
+bool NetworkManager::sendMessage(Message* message, int maxRetries, int retryDelayMs) {
+    auto endpointIt = shardEndpoints.find(message->dstShardId);
     if (endpointIt == shardEndpoints.end()) {
-        std::cerr << "[NetworkManager] destination shard not configured: " << message.dstShardId << std::endl;
+        std::cerr << "[NetworkManager] destination shard not configured: " << message->dstShardId << std::endl;
         return false;
     }
 
@@ -252,7 +252,7 @@ bool NetworkManager::sendMessage(const Message& message, int maxRetries, int ret
         std::this_thread::sleep_for(std::chrono::milliseconds(retryDelayMs));
     }
 
-    std::cerr << "[NetworkManager] failed to connect shard " << message.dstShardId
+    std::cerr << "[NetworkManager] failed to connect shard " << message->dstShardId
               << " after " << maxRetries << " retries" << std::endl;
     return false;
 }
@@ -264,7 +264,3 @@ void NetworkManager::registerHandler(MessageType type, MessageDispatcher::Handle
 void NetworkManager::registerCustomHandler(int type, MessageDispatcher::Handler handler) {
     dispatcher.registerCustomHandler(type, handler);
 }
-
-// void NetworkManager::setDefaultHandler(MessageDispatcher::Handler handler) {
-//     dispatcher.setDefaultHandler(handler);
-// }

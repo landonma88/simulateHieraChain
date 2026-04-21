@@ -4,8 +4,8 @@
 #include <map>
 #include <iostream>
 #include <memory>
-#include "common.h"
 #include "network.h"
+#include "common.h"
 
 using namespace std;
 

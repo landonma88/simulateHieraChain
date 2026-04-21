@@ -28,22 +28,51 @@ shard2_shard3:2000
 [ID: 6] Type: Cross | Count: 2000 | Involved Shards: [3, 4]
 [ID: 7] Type: Cross | Count: 2000 | Involved Shards: [2, 3]
 
-启动分片5 ...
+启动分片当前分片5, tps = 0, latency = 0
+5 ...
+当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
+当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
+当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
+当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
+当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
+当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
+当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
 当前分片5, tps = 0, latency = 0
 当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
+当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
+当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
+当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
+当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
+当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
+当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
+当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
 当前分片5, tps = 0, latency = 0
 当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
 当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
 当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
 当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
 当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
 当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries
 当前分片5, tps = 0, latency = 0
-当前分片5, tps = 0, latency = 0
-当前分片5, tps = 0, latency = 0
-当前分片5, tps = 0, latency = 0
-当前分片5, tps = 0, latency = 0
-当前分片5, tps = 0, latency = 0
-当前分片5, tps = 0, latency = 0
-当前分片5, tps = 0, latency = 0
-当前分片5, tps = 0, latency = 0
+[NetworkManager] failed to connect shard 2 after 5 retries

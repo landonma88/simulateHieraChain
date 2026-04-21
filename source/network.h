@@ -7,7 +7,6 @@
 #include <mutex>
 #include <string>
 #include <thread>
-
 #include "message.h"
 
 class NetworkManager {
@@ -24,12 +23,9 @@ public:
     bool loadConfig(const std::string& configPath);
     bool start();
     void stop();
-
-    bool sendMessage(const Message& message, int maxRetries = 5, int retryDelayMs = 200);
-
+    bool sendMessage(Message* message, int maxRetries = 5, int retryDelayMs = 200);
     void registerHandler(MessageType type, MessageDispatcher::Handler handler);
     void registerCustomHandler(int type, MessageDispatcher::Handler handler);
-    void setDefaultHandler(MessageDispatcher::Handler handler);
 
 private:
     void acceptLoop();

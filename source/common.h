@@ -28,7 +28,7 @@ extern map<int, pair<int, double>> latencys;
 
 // 定义交易
 struct transaction{
-    int type; // 交易类型，1表示片内交易，2表示跨片交易
+    double type; // 交易类型，1表示片内交易、2表示跨片交易、1.5表示已经由上层定过顺序的跨片交易，需要立即处理
     string txId;
     vector<string> RWSet; // 交易读写集
     vector<int> invlovedShardIds;

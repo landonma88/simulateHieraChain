@@ -228,34 +228,33 @@ void Shard::runExecution(){
                 for (int sid : targetShards) {
                     pendingSendQueue[sid].push_back(tx);
                 }
+            }
 
-                // 3. 模拟发送逻辑（将待发送集合转发给通信模块）
-                if (!pendingSendQueue.empty()) {
-                    for (const auto& entry : pendingSendQueue) {
-                        // int dstShardId = entry.first;
-                        // const std::vector<transaction*>& txs = entry.second;
-                        // std::ostringstream bodyStream;
-                        // bodyStream << "txCount=" << txs.size() << ";txIds=";
-                        // for (size_t i = 0; i < txs.size(); ++i) {
-                        //     bodyStream << txs[i]->txId;
-                        //     if (i + 1 < txs.size()) {
-                        //         bodyStream << ",";
-                        //     }
-                        // }
+            // 3. 模拟发送逻辑（将待发送集合转发给通信模块）
+            if (!pendingSendQueue.empty()) {
+                for (const auto& entry : pendingSendQueue) {
 
-                        // Message requestMsg{
-                        //     static_cast<int>(MessageType::MSG_CROSS_TX_REQUEST),
-                        //     this->shardId,
-                        //     dstShardId,
-                        //     bodyStream.str()
-                        // };
+                    int dstShardId = entry.first;
+                    std::vector<transaction*> txsPointers = entry.second;
+                    std::vector<transaction> txs;
 
-                        // if (networkManager) {
-                        //     networkManager->sendMessage(requestMsg);
-                        // }
+                    for (auto txsPointer: txsPointers){
+                        txs.push_back(*txsPointer);
+                    }
+
+                    Message requestMsg{ // 初始化Message
+                        static_cast<int>(MessageType::CROSS_SHARD_TX_REQUEST),
+                        this->shardId,
+                        dstShardId,
+                        txs
+                    };
+
+                    if (networkManager) {
+                        networkManager->sendMessage(&requestMsg); // 发送消息
                     }
                 }
             }
+
         }
 
         if(existIntraTransactions){ // 这里执行的时候只能统计到片内交易的信息，跨片需要协调者分片收齐commit消息后统一处理
@@ -368,21 +367,7 @@ void Shard::initNetwork(){
     }
 
     // 注册消息包处理函数
-    networkManager->registerHandler(MessageType::CROSS_SHARD_TX_REQUEST, [this](const Message& msg) {
-        std::cout << "收到了来自分片 " << msg.srcShardId << "的跨片交易" << endl;
-    
-        //     Message voteMsg{
-        //         static_cast<int>(MessageType::MSG_CROSS_TX_VOTE),
-        //         this->shardId,
-        //         msg.srcShardId,
-        //         "vote=ACK;requestFrom=" + std::to_string(msg.srcShardId)
-        //     };
-        //     networkManager->sendMessage(voteMsg);
-    });
-
-    networkManager->registerHandler(MessageType::CROSS_SHARD_TX_COMMIT_MSG, [this](const Message& msg) {
-        std::cout << "收到了来自分片 " << msg.srcShardId << "的跨片交易提交消息" << endl;
-    });
+    MessageDispatcher();
 }
 
 

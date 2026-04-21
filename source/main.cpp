@@ -36,7 +36,7 @@ int main(){
     // 测试发送
     if (shard->shardId == 5){
         Message msg = {1, 5, 1, {}};
-        shard->networkManager->sendMessage(msg, 5, 10);
+        shard->networkManager->sendMessage(&msg, 5, 10);
     }
 
     while (true) { // 主线程常驻

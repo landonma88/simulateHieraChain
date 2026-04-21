@@ -6,6 +6,7 @@
 #include <mutex>
 #include <string>
 #include "common.h"
+#include "shard.h"
 
 enum class MessageType : int { // 消息类型
     CROSS_SHARD_TX_REQUEST = 1,
@@ -19,11 +20,12 @@ struct Message { // 消息结构体
     vector<transaction> txs;
 };
 
-std::string serializeMessagePayload(const Message& msg); //
+std::string serializeMessagePayload(Message* msg); //
 bool deserializeMessagePayload(const std::string& payload, Message& outMessage);
 std::string messageTypeToString(int type);
 
 class MessageDispatcher {
+
 public:
     using Handler = std::function<void(const Message&)>;
 

@@ -5,14 +5,14 @@
 
 using namespace std;
 
-std::string serializeMessagePayload(const Message& msg) {
+std::string serializeMessagePayload(Message* msg) {
     std::ostringstream oss;
-    oss << msg.type << "|" 
-        << msg.srcShardId << "|" 
-        << msg.dstShardId << "|" 
-        << msg.txs.size();
+    oss << msg->type << "|" 
+        << msg->srcShardId << "|" 
+        << msg->dstShardId << "|" 
+        << msg->txs.size();
     
-    for (const auto& tx : msg.txs) {
+    for (auto& tx : msg->txs) {
         oss << "|" << tx.serialize(); // 调用 transaction 的序列化
     }
     return oss.str();
@@ -104,8 +104,19 @@ void MessageDispatcher::dispatch(const Message& message) const {
 }
 
 void MessageDispatcher::crossShardTxsHandler(const Message& message) const{
-    cout << "收到了来自上层的跨片交易任务....." << endl;
     
+    int sourceShardId = message.srcShardId;
+    cout << "收到了来自分片 " << sourceShardId << "的跨片交易任务....." << endl;
+    
+    auto txs = message.txs;
+    for (auto tx : txs) {
+        tx.type = 1.5;
+    }
+
+
+
+
+
 
 
 }
