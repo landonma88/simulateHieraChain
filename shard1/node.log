@@ -33,8 +33,8 @@ shard2_shard3:2000
 [ID: 6] Type: Cross | Count: 2000 | Involved Shards: [3, 4]
 [ID: 7] Type: Cross | Count: 2000 | Involved Shards: [2, 3]
 
-启动分片当前分片1 ...1, tps = 0, 
-latency = 0
+启动分片1 ...
+当前分片1, tps = 0, latency = 0
 txsToExecute.size = 5000
 收到了来自分片 5的跨片交易任务.....
 收到了来自分片 5的跨片交易任务.....
@@ -43,20 +43,10 @@ txsToExecute.size = 5000
 收到了来自分片 5的跨片交易任务.....
 收到了来自分片 5的跨片交易任务.....
 收到了来自分片 5的跨片交易任务.....
-当前分片1, tps = 5000 , latency = 0.070729
 收到了来自分片 5的跨片交易任务.....
-txsToExecute.size = 3033
+当前分片1, tps = 5000 , latency = 0.084497
 收到了来自分片 5的跨片交易任务.....
-收到了来自分片 5的跨片交易任务.....
-收到了来自分片 5的跨片交易任务.....
-收到了来自分片 5的跨片交易任务.....
-收到了来自分片 5的跨片交易任务.....
-收到了来自分片 5的跨片交易任务.....
-txsToExecute.size = 5000
-收到了来自分片 5的跨片交易任务.....
-收到了来自分片 5的跨片交易任务.....
-收到了来自分片 5的跨片交易任务.....
-当前分片1, tps = 7992 , latency = -22.538
+txsToExecute.size = 3016
 收到了来自分片 5的跨片交易任务.....
 收到了来自分片 5的跨片交易任务.....
 收到了来自分片 5的跨片交易任务.....
@@ -67,75 +57,280 @@ txsToExecute.size = 5000
 收到了来自分片 5的跨片交易任务.....
 收到了来自分片 5的跨片交易任务.....
 收到了来自分片 5的跨片交易任务.....
-当前分片1, tps = 4928 , latency = -65.2213
+当前分片1, tps = 8000 , latency = -2.29076
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
 收到了来自分片 5的跨片交易任务.....
 收到了来自分片 5的跨片交易任务.....
 收到了来自分片 5的跨片交易任务.....
 txsToExecute.size = 5000
-当前分片1, tps = 5000 , latency = 1.607
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+当前分片1, tps = 4960 , latency = -11.2435
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
 txsToExecute.size = 5000
-当前分片1, tps = 4920 , latency = -72.1276
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+当前分片1, tps = 5000 , latency = 1.62443
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
 txsToExecute.size = 5000
-当前分片1, tps = 4992 , latency = -5.04744
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+当前分片1, tps = 4960 , latency = -10.6536
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
 txsToExecute.size = 5000
-当前分片1, tps = 5000 , latency = 1.49522
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+当前分片1, tps = 4960 , latency = -10.042
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
+收到了来自分片 5的跨片交易任务.....
 txsToExecute.size = 5000
-当前分片1, tps = 5000 , latency = 2.51075
+当前分片1, tps = 5000 , latency = 2.56066
 txsToExecute.size = 5000
-当前分片1, tps = 5000 , latency = 3.5163
+当前分片1, tps = 4960 , latency = -10.7203
 txsToExecute.size = 5000
-当前分片1, tps = 168 , latency = 4.53126
+当前分片1, tps = 5000 , latency = 1.34878
 txsToExecute.size = 5000
-当前分片1, tps = 3693 , latency = 3.97545
+当前分片1, tps = 3098 , latency = -16.496
 txsToExecute.size = 5000
-当前分片1, tps = 5000 , latency = 4.45699
+当前分片1, tps = 5000 , latency = 4.07308
 txsToExecute.size = 5000
-当前分片1, tps = 5000 , latency = 1.42351
+当前分片1, tps = 5000 , latency = 4.38179
 txsToExecute.size = 5000
-当前分片1, tps = 4458 , latency = 398559
+当前分片1, tps = 3330 , latency = 4.72371
 txsToExecute.size = 5000
-当前分片1, tps = 3039 , latency = 5.39682
+当前分片1, tps = 5000 , latency = 5.19868
 txsToExecute.size = 5000
-当前分片1, tps = 2168 , latency = 6.40696
+当前分片1, tps = 5000 , latency = 5.30959
+txsToExecute.size = 5000
+当前分片1, tps = 2200 , latency = 6.3279
+txsToExecute.size = 5000
+当前分片1, tps = 1149 , latency = 1.54651e+06
+txsToExecute.size = 5000
+当前分片1, tps = 5000 , latency = 2.04408
+txsToExecute.size = 5000
+当前分片1, tps = 3200 , latency = 0.939551
+txsToExecute.size = 5000
+当前分片1, tps = 3821 , latency = 7.22601
+txsToExecute.size = 5000
+当前分片1, tps = 1386 , latency = 1.28206e+06
+txsToExecute.size = 5000
+当前分片1, tps = 2042 , latency = 5.04642
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 2228 , latency = 797551
 txsToExecute.size = 5000
 当前分片1, tps = 0, latency = 0
 txsToExecute.size = 5000
 当前分片1, tps = 0, latency = 0
 txsToExecute.size = 5000
-当前分片1, tps = 2023 , latency = 7.14477
+当前分片1, tps = 0, latency = 0
 txsToExecute.size = 5000
-当前分片1, tps = 5000 , latency = 6.24045
+当前分片1, tps = 3066 , latency = 6.93323
+当前分片1, tps = 2517 , latency = 4.79323
 txsToExecute.size = 5000
-当前分片1, tps = 3330 , latency = 7.25883
+当前分片1, tps = 4447 , latency = 8.90578
 txsToExecute.size = 5000
-当前分片1, tps = 4168 , latency = 8.26297
+当前分片1, tps = 5000 , latency = 10.211
 txsToExecute.size = 5000
-当前分片1, tps = 1555 , latency = 8.21972
+当前分片1, tps = 5000 , latency = 6.75823
 txsToExecute.size = 5000
-当前分片1, tps = 925 , latency = 9.23284
+当前分片1, tps = 5000 , latency = 3.60738
 txsToExecute.size = 5000
-当前分片1, tps = 192 , latency = 9.25405e+06
+当前分片1, tps = 3152 , latency = 2.02337
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 192 , latency = 9.25485e+06
 txsToExecute.size = 5000
 当前分片1, tps = 0, latency = 0
 txsToExecute.size = 5000
 当前分片1, tps = 0, latency = 0
 txsToExecute.size = 5000
-当前分片1, tps = 4066 , latency = 6.32283
+当前分片1, tps = 482 , latency = 7.37315e+06
 txsToExecute.size = 5000
-当前分片1, tps = 5000 , latency = 7.76885
+当前分片1, tps = 186 , latency = 9.55338e+06
 txsToExecute.size = 5000
-当前分片1, tps = 5000 , latency = 9.81343
-当前分片1, tps = 5000 , latency = 10.0132
+当前分片1, tps = 2055 , latency = 0.989331
 txsToExecute.size = 5000
-当前分片1, tps = 5000 , latency = 9.74912
+当前分片1, tps = 179 , latency = 9.92698e+06
 txsToExecute.size = 5000
-当前分片1, tps = 2832 , latency = 4.63415
+当前分片1, tps = 896 , latency = 1.98318e+06
 txsToExecute.size = 5000
-当前分片1, tps = 5000 , latency = 0.31671
+当前分片1, tps = 3200 , latency = 1.90543
 txsToExecute.size = 5000
-当前分片1, tps = 168 , latency = 0.270624
+当前分片1, tps = 2517 , latency = 15.6767
 txsToExecute.size = 5000
-当前分片1, tps = 1832 , latency = 1.29017
+当前分片1, tps = 1945 , latency = 913600
 txsToExecute.size = 5000
-当前分片1, tps = 5000 , latency = 2.30376
+当前分片1, tps = 745 , latency = 2.38514e+06
 txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 2048 , latency = 2.7413
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 4800 , latency = 1.5116
+txsToExecute.size = 5000
+当前分片1, tps = 2234 , latency = 2.52378
+txsToExecute.size = 5000
+当前分片1, tps = 192 , latency = 9.25484e+06
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 192 , latency = 9.25484e+06
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 2800 , latency = 10.8511
+txsToExecute.size = 5000
+当前分片1, tps = 5000 , latency = 6.30195
+txsToExecute.size = 5000
+当前分片1, tps = 200 , latency = 5.36297
+txsToExecute.size = 5000
+当前分片1, tps = 1800 , latency = 3.1672
+txsToExecute.size = 5000
+当前分片1, tps = 4339 , latency = 409531
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 5000 , latency = 4.95663
+txsToExecute.size = 5000
+当前分片1, tps = 5000 , latency = 9.24538
+txsToExecute.size = 5000
+当前分片1, tps = 200 , latency = 10.2707
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 2104 , latency = 0.589313
+txsToExecute.size = 5000
+当前分片1, tps = 3800 , latency = 1.61377
+txsToExecute.size = 5000
+当前分片1, tps = 104 , latency = 2.62085
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 2893 , latency = 614217
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 192 , latency = 9.25486e+06
+txsToExecute.size = 5000
+当前分片1, tps = 290 , latency = 6.12734e+06
+txsToExecute.size = 5000
+当前分片1, tps = 800 , latency = 4.36368
+txsToExecute.size = 5000
+当前分片1, tps = 4808 , latency = 4.99193
+txsToExecute.size = 5000
+当前分片1, tps = 5000 , latency = 7.4971
+txsToExecute.size = 5000
+当前分片1, tps = 4808 , latency = 8.04044
+txsToExecute.size = 5000
+当前分片1, tps = 5000 , latency = 1.36871
+txsToExecute.size = 5000
+当前分片1, tps = 3200 , latency = 0.899933
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 838 , latency = 4.24088e+06
+txsToExecute.size = 5000
+当前分片1, tps = 4200 , latency = 0.767012
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 2042 , latency = 31.5828
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 2800 , latency = 4.53244
+txsToExecute.size = 5000
+当前分片1, tps = 5000 , latency = 5.54747
+txsToExecute.size = 5000
+当前分片1, tps = 5000 , latency = 6.56575
+txsToExecute.size = 5000
+当前分片1, tps = 5000 , latency = 6.03924
+txsToExecute.size = 5000
+当前分片1, tps = 5000 , latency = 2.3594
+txsToExecute.size = 5000
+当前分片1, tps = 5000 , latency = 2.07245
+txsToExecute.size = 5000
+当前分片1, tps = 5000 , latency = 5.77164
+txsToExecute.size = 5000
+当前分片1, tps = 3296 , latency = 5.23826
+txsToExecute.size = 5000
+当前分片1, tps = 838 , latency = 4.24089e+06
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 1800 , latency = 5.0221
+txsToExecute.size = 5000
+当前分片1, tps = 3464 , latency = 1.02595e+06
+txsToExecute.size = 5000
+当前分片1, tps = 1200 , latency = 7.04863
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 2235 , latency = 795050
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 4800 , latency = 4.66184
+txsToExecute.size = 5000
+当前分片1, tps = 3200 , latency = 5.67669
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
+txsToExecute.size = 5000
+当前分片1, tps = 0, latency = 0
