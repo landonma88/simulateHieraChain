@@ -16,6 +16,7 @@ namespace Config {
     extern int transactionSendRate;
     extern string ownedStateIdsDir;
     extern string shardsTopologyDir;
+    extern string topShardIdDir;
     extern string workLoadDir;
     extern string shardIdDir;
     extern string networkConfigDir;

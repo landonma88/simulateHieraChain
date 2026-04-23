@@ -388,6 +388,37 @@ void ShardHelper::parseTopology() {
     if (shard.role != ShardRole::LEAF) shard.role = ShardRole::COORDINATOR;
 }
 
+int ShardHelper::parseTopShardId() {
+    
+    int topShardId;
+    std::ifstream file(Config::topShardIdDir);
+    if (!file.is_open()) {
+        std::cerr << "无法打开文件！" << std::endl;
+        exit(1);
+    }
+
+    std::string line;
+    if (std::getline(file, line)) {
+        // 1. 找到 '=' 的位置
+        size_t pos = line.find('=');
+
+        if (pos != std::string::npos) {
+            // 2. 截取 '=' 之后的部分
+            std::string valueStr = line.substr(pos + 1);
+
+            // 3. 转换为整数 (stoi 会自动处理前导空格)
+            try {
+                topShardId = std::stoi(valueStr);
+            } catch (const std::exception& e) {
+                std::cerr << "Failed to convert shardId number: " << e.what() << std::endl;
+            }
+        }
+    }
+
+    file.close();
+    return topShardId;
+}
+
 // 提取分片Id
 int ShardHelper::parseShardId() {
     int shardId;

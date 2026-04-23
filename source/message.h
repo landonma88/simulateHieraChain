@@ -21,6 +21,13 @@ struct Message { // 消息结构体
     vector<transaction> txs;
 };
 
+struct performanceMessage {
+    double tps;
+    double latency;
+};
+
+
+
 std::string serializeMessagePayload(Message* msg); //
 bool deserializeMessagePayload(const std::string& payload, Message& outMessage);
 std::string messageTypeToString(int type);

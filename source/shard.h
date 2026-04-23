@@ -27,6 +27,7 @@ public:
 
     int txId = 0;
     int shardId;
+    int topshardId;
     ShardRole role; // 成员变量
     int orderingCapacity; // 交易排序能力（每秒能够处理的交易处理）
     int executionCapacity; // 交易执行能力（美秒能够执行的工作量）
@@ -47,7 +48,7 @@ public:
     std::map<int, int> parentMap; // 存储 子分片 -> 父分片 的反向映射，用于向上追溯
 
     map<int, txsDistribution> intraShardTxsDistribution; // 片内交易负载
-    map<int, txsDistribution> crossShardTxsDistribution; // 跨片交易负载 
+    map<int, txsDistribution> crossShardTxsDistribution; // 跨片交易负载
 
 // private:
     std::unique_ptr<ShardHelper> helper;

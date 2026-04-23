@@ -171,10 +171,9 @@ void Shard::enqueueTransactions(){
         int tx_size = txs.size();
         for(int i = 0; i < tx_size; i++){
 
-
-
-
-            transactionMempool.push(&(txs.at(i))); // 交易进入交易池
+            transaction* txPtr = new transaction(txs[i]); // ✅ 堆上分配，指针不会失效
+            transactionMempool.push(txPtr);
+            // transactionMempool.push(&(txs.at(i))); // 交易进入交易池
         }
         mempoolMutex.unlock(); // 解锁
 
@@ -360,11 +359,14 @@ void Shard::start(){
 void Shard::printPerformanceStats(){
 
     performanceMetricsMutex.lock();
+
+    double tps = committedTxCount;
+    double latency = committedTxTotalLatency / committedTxCount;
     
     if(committedTxCount == 0){
         cout << "当前分片"<< shardId << ", tps = 0, " << "latency = 0" << endl;
     }else{
-        cout << "当前分片" << shardId << ", tps = "<< committedTxCount << " , latency = "<< committedTxTotalLatency / committedTxCount << endl;
+        cout << "当前分片" << shardId << ", tps = "<< tps << " , latency = "<< latency << endl;
     }
 
     committedTxTotalLatency = 0;
@@ -406,8 +408,9 @@ Shard::Shard() : helper(new ShardHelper(*this)) {
 
     // 获取分片id
     this->shardId = helper->parseShardId();
-    initNetwork(); // 初始化网络模块
+    this->topshardId = helper->parseTopShardId(); // 解析 topshardId
 
+    initNetwork(); // 初始化网络模块
     helper->parseTopology(); // 解析系统拓扑
     helper->printShardTopology(); // 打印系统拓扑结构
 

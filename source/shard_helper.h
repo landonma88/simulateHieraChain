@@ -9,6 +9,7 @@ class ShardHelper {
 public:
     explicit ShardHelper(Shard& shard);
 
+    int parseTopShardId();
     int parseShardId();
     void parseTopology();
     void printShardTopology();

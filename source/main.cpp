@@ -14,13 +14,14 @@ using namespace std;
 namespace Config {
     // 配置项
     int orderingCapacity = 5000;
-    int executionCapacity = 8000;
+    int executionCapacity = 8000; // 暂未启用
     int batchFetchSize = 5000;
-    int transactionSendRate = 8000;
+    int transactionSendRate = 5000;
     string ownedStateIdsDir = "../accessControlList";
     string shardsTopologyDir = "../shardsTopology";
     string workLoadDir = "../workloadProfile";
     string shardIdDir = "shardId";
+    string topShardIdDir = "../topShardId";
     string networkConfigDir = "../networkConfig";
 }
 
@@ -33,6 +34,8 @@ int main(){
     Shard* shard = new Shard();
     std::this_thread::sleep_for(std::chrono::milliseconds(10000)); // 等待10秒
     shard->start();
+
+    // cout << "topShardId = " << shard->topshardId << endl;
 
     // // 测试发送
     // if (shard->shardId == 5){
